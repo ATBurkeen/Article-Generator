@@ -1,0 +1,91 @@
+{
+  "businessName": "书包文案生成",
+  "businessKey": "bookbag",
+  "version": "1.0.0",
+  "description": "针对护脊书包等学生用品的小红书爆文生成",
+  "parameters": [
+    {
+      "key": "targetAudience",
+      "label": "目标人群",
+      "type": "input",
+      "required": true,
+      "placeholder": "如：1-3年级学生家长、初中生家长、4-6年级家长等"
+    },
+    {
+      "key": "feature",
+      "label": "核心卖点",
+      "type": "textarea",
+      "required": true,
+      "placeholder": "如：护脊减负、大容量、身高定制、防水耐磨等",
+      "rows": 3
+    },
+    {
+      "key": "brand",
+      "label": "品牌",
+      "type": "select",
+      "options": [
+        "戈撒驰",
+        "GMT",
+        "贝克曼",
+        "其他"
+      ],
+      "required": false,
+      "placeholder": "选填，如不填则AI自动选择"
+    },
+    {
+      "key": "priceRange",
+      "label": "价格区间",
+      "type": "select",
+      "options": [
+        "100-300元",
+        "300-500元",
+        "500-800元",
+        "800元以上"
+      ],
+      "required": false
+    },
+    {
+      "key": "targetScene",
+      "label": "使用场景",
+      "type": "input",
+      "required": false,
+      "placeholder": "如：上下学、周末补习、旅游等"
+    }
+  ],
+  "dataSource": {
+    "file": "戈撒驰高转化文章.xlsx",
+    "searchFields": ["笔记标签", "笔记正文", "笔记标题"],
+    "filterFields": {
+      "minEngagementRate": 0.05,
+      "minLikes": 20
+    }
+  },
+  "knowledgeBase": {
+    "enabledLibraries": ["popular_articles", "keywords", "rtb"],
+    "popularArticles": {
+      "count": 5,
+      "description": "匹配高互动率的爆文作为参考"
+    },
+    "keywords": {
+      "count": 15,
+      "description": "提取用户痛点和共情点关键词"
+    },
+    "rtb": {
+      "count": 3,
+      "description": "产品核心卖点话术"
+    }
+  },
+  "workflow": {
+    "steps": [
+      { "id": "params", "name": "参数收集", "description": "用户填写创作参数" },
+      { "id": "knowledge", "name": "知识库检索", "description": "AI生成模拟知识库数据" },
+      { "id": "profile", "name": "用户画像", "description": "生成目标用户人物素描" },
+      { "id": "empathy", "name": "共情点提取", "description": "提取核心痛点和需求" },
+      { "id": "article", "name": "文章生成", "description": "撰写小红书风格文案" },
+      { "id": "titles", "name": "标题优化", "description": "生成10个标题候选" },
+      { "id": "compliance", "name": "违禁词审核", "description": "检查并修正敏感词汇" },
+      { "id": "formatting", "name": "格式调整", "description": "插入emoji和优化排版" }
+    ]
+  }
+}
+
