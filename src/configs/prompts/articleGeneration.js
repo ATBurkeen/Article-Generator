@@ -12,7 +12,10 @@ export default {
 - 适当使用emoji增强表达力`,
 
   userPromptTemplate: `
-请撰写一篇400字左右的小红书文案：
+请撰写一篇{{articleLength}}字左右的小红书文案：
+
+**创作者人设**：
+{{persona}}
 
 **目标用户**：
 {{userProfile}}
@@ -47,6 +50,8 @@ export default {
   temperature: 0.8,
   maxTokens: 2000,
   variableMapping: {
+    'articleLength': 'workflow.parameters.articleLength',
+    'persona': 'workflow.intermediateResults.persona',
     'userProfile': 'workflow.intermediateResults.userProfile',
     'empathyPoints': 'workflow.intermediateResults.empathyPoints',
     'rtb': 'workflow.intermediateResults.rtb',

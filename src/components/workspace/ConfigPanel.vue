@@ -43,6 +43,29 @@
           :rows="param.rows || 3"
           type="textarea"
         />
+
+        <!-- 数字输入框 -->
+        <el-input-number
+          v-else-if="param.type === 'number'"
+          v-model="formData[param.key]"
+          :placeholder="param.placeholder"
+          :min="param.min"
+          :max="param.max"
+          :step="param.step || 50"
+          style="width: 100%"
+        />
+
+        <!-- 开关 -->
+        <div v-else-if="param.type === 'switch'" class="switch-wrapper">
+          <el-switch
+            v-model="formData[param.key]"
+            active-text="启用"
+            inactive-text="禁用"
+          />
+          <span v-if="param.description" class="switch-description">
+            {{ param.description }}
+          </span>
+        </div>
       </el-form-item>
 
       <el-form-item>
@@ -82,7 +105,14 @@ const rules = reactive({})
 // 初始化表单数据和验证规则
 function initForm() {
   props.config.parameters.forEach(param => {
-    formData[param.key] = ''
+    // 根据类型设置初始值
+    if (param.type === 'switch') {
+      formData[param.key] = param.default !== undefined ? param.default : false
+    } else if (param.type === 'number') {
+      formData[param.key] = param.default !== undefined ? param.default : null
+    } else {
+      formData[param.key] = param.default !== undefined ? param.default : ''
+    }
     
     if (param.required) {
       rules[param.key] = [
@@ -113,6 +143,17 @@ async function handleSubmit() {
 <style scoped>
 .config-panel {
   padding: 16px 0;
+}
+
+.switch-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.switch-description {
+  color: #909399;
+  font-size: 12px;
 }
 </style>
 

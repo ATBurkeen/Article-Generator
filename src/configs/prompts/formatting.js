@@ -32,7 +32,12 @@ export default {
    - 统一语气和人称
    - 删除冗余表达
 
-**输出格式**：请严格按照以下JSON格式输出，不要添加任何其他文字说明：
+**输出格式要求（必读）**：
+1. 只输出纯JSON对象
+2. 不要添加markdown标记（如\`\`\`json）
+3. 不要添加任何前缀或后缀说明文字
+4. 直接输出以下格式的JSON：
+
 {
   "result": {
     "title": "优化后的标题（含emoji）",
@@ -41,8 +46,6 @@ export default {
     "modifications": ["主要修改说明1", "主要修改说明2"]
   }
 }
-
-要求：只输出JSON对象，不要包含其他说明文字或markdown标记
 `,
   temperature: 0.6,
   maxTokens: 2500,

@@ -82,27 +82,82 @@ export function useAI() {
     const response = await callClaude(enhancedPrompt, systemPrompt, config)
     
     try {
-      // 移除可能的markdown代码块标记
+      // 移除可能的markdown代码块标记和前后空白
       let cleanResponse = response.trim()
       
-      // 移除 ```json 和 ``` 标记
-      cleanResponse = cleanResponse.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
+      // 移除 ```json 和 ``` 标记（支持多种变体）
+      cleanResponse = cleanResponse.replace(/^```(?:json|JSON)?\s*/i, '')
+      cleanResponse = cleanResponse.replace(/\s*```\s*$/g, '')
+      
+      // 移除可能的前缀文字（如"这是JSON:"、"以下是结果："等）
+      const prefixPatterns = [
+        /^[^{[\n]*(?=[\{\[])/,  // 匹配 { 或 [ 之前的任何内容
+        /^.*?(?=\{|\[)/s        // 匹配第一个 { 或 [ 之前的所有内容
+      ]
+      
+      for (const pattern of prefixPatterns) {
+        const match = cleanResponse.match(pattern)
+        if (match && match[0].length < 100) {  // 只移除短前缀
+          cleanResponse = cleanResponse.replace(pattern, '')
+          break
+        }
+      }
+      
+      cleanResponse = cleanResponse.trim()
       
       // 尝试提取JSON内容（最外层的花括号或方括号）
       const jsonMatch = cleanResponse.match(/(\{[\s\S]*\}|\[[\s\S]*\])/)
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0])
-        console.log('✅ JSON解析成功:', parsed)
+        const jsonStr = jsonMatch[0]
+        
+        // 清理可能的emoji和特殊字符（在JSON字符串外部）
+        const parsed = JSON.parse(jsonStr)
+        console.log('✅ JSON解析成功 (通过正则提取):', parsed)
         return parsed
       }
       
       // 如果没有匹配到，尝试直接解析
       const parsed = JSON.parse(cleanResponse)
-      console.log('✅ JSON解析成功:', parsed)
+      console.log('✅ JSON解析成功 (直接解析):', parsed)
       return parsed
     } catch (err) {
-      console.error('❌ JSON解析失败，原始响应:', response)
+      console.error('❌ JSON解析失败')
+      console.error('原始响应:', response.substring(0, 500))
+      console.error('清理后:', response.trim().substring(0, 500))
       console.error('解析错误:', err.message)
+      
+      // 尝试最后一招：查找最大的合法JSON对象
+      try {
+        const allBraces = []
+        let depth = 0
+        let start = -1
+        
+        for (let i = 0; i < response.length; i++) {
+          if (response[i] === '{') {
+            if (depth === 0) start = i
+            depth++
+          } else if (response[i] === '}') {
+            depth--
+            if (depth === 0 && start !== -1) {
+              allBraces.push(response.substring(start, i + 1))
+            }
+          }
+        }
+        
+        // 尝试解析找到的每个JSON块
+        for (const jsonBlock of allBraces.reverse()) {
+          try {
+            const parsed = JSON.parse(jsonBlock)
+            console.log('✅ JSON解析成功 (暴力提取):', parsed)
+            return parsed
+          } catch {
+            continue
+          }
+        }
+      } catch {
+        // 最后一招也失败了
+      }
+      
       throw new Error(`AI返回的内容不是有效的JSON格式。响应内容：${response.substring(0, 200)}...`)
     }
   }

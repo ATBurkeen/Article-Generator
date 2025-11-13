@@ -33,7 +33,13 @@ export default {
 3. 保持文章的整体结构和情感表达
 4. 确保修改后的内容仍然流畅自然
 
-**输出格式**：请严格按照以下JSON格式输出，不要添加任何其他文字说明：
+**输出格式要求（必读）**：
+1. 只输出纯JSON对象
+2. 不要添加markdown标记（如\`\`\`json）
+3. 不要添加任何前缀或后缀说明文字
+4. 不要添加emoji或特殊符号
+5. 直接输出以下格式的JSON：
+
 {
   "compliance": {
     "hasIssues": true,
@@ -52,7 +58,6 @@ export default {
 说明：
 - hasIssues: 布尔值，true表示有违规，false表示无违规
 - 如果没有违规问题，issues为空数组[]，fixedTitle和fixedArticle保持原文不变
-- 只输出JSON对象，不要包含其他说明文字
 `,
   temperature: 0.5,
   maxTokens: 2500,

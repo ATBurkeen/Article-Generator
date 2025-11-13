@@ -22,6 +22,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
   
   // 中间结果
   const intermediateResults = ref({
+    persona: '',                 // 创作者人设
     popularArticles: null,      // 爆文库
     keywords: null,              // 关键词库
     rtb: null,                   // RTB话术库
@@ -105,6 +106,7 @@ export const useWorkflowStore = defineStore('workflow', () => {
     currentStep.value = 0
     parameters.value = {}
     intermediateResults.value = {
+      persona: '',
       popularArticles: null,
       keywords: null,
       rtb: null,

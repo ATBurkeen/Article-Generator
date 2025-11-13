@@ -1,22 +1,22 @@
 {
-  "businessName": "书包文案生成",
+  "businessName": "爆款文案生成",
   "businessKey": "bookbag",
   "version": "1.0.0",
-  "description": "针对护脊书包等学生用品的小红书爆文生成",
+  "description": "针对商家宣发需要分享爆款文案的生成",
   "parameters": [
     {
       "key": "targetAudience",
       "label": "目标人群",
       "type": "input",
       "required": true,
-      "placeholder": "如：1-3年级学生家长、初中生家长、4-6年级家长等"
+      "placeholder": "请输入目标人群描述"
     },
     {
       "key": "feature",
       "label": "核心卖点",
       "type": "textarea",
       "required": true,
-      "placeholder": "如：护脊减负、大容量、身高定制、防水耐磨等",
+      "placeholder": "请描述产品核心卖点",
       "rows": 3
     },
     {
@@ -49,7 +49,41 @@
       "label": "使用场景",
       "type": "input",
       "required": false,
-      "placeholder": "如：上下学、周末补习、旅游等"
+      "placeholder": "请描述产品使用场景"
+    },
+    {
+      "key": "articleLength",
+      "label": "文章字数",
+      "type": "number",
+      "required": false,
+      "placeholder": "不填则默认400字",
+      "min": 200,
+      "max": 1000,
+      "default": 400
+    },
+    {
+      "key": "enablePopularArticles",
+      "label": "启用爆文库",
+      "type": "switch",
+      "required": false,
+      "default": true,
+      "description": "参考高互动爆文的写作风格"
+    },
+    {
+      "key": "enableKeywords",
+      "label": "启用关键词库",
+      "type": "switch",
+      "required": false,
+      "default": true,
+      "description": "提取用户痛点和共情关键词"
+    },
+    {
+      "key": "enableRTB",
+      "label": "启用产品话术库",
+      "type": "switch",
+      "required": false,
+      "default": true,
+      "description": "生成产品核心卖点话术"
     }
   ],
   "dataSource": {

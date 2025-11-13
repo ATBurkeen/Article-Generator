@@ -4,6 +4,7 @@ import { useWorkflowStore } from '../stores/workflow'
 import { useAppStore } from '../stores/app'
 
 // 导入所有Prompt配置
+import personaPrompt from '../configs/prompts/persona'
 import knowledgeBasePrompts from '../configs/prompts/knowledgeBase'
 import userProfilePrompt from '../configs/prompts/userProfile'
 import empathyPointsPrompt from '../configs/prompts/empathyPoints'
@@ -55,7 +56,10 @@ export class WorkflowOrchestrator {
       this.workflowStore.updateStepStatus('params', 'completed')
       this.workflowStore.nextStep()
       
-      // 步骤2: 知识库检索
+      // 新步骤: 人设生成
+      await this.stepPersonaGeneration()
+      
+      // 步骤2: 知识库检索（可选）
       await this.stepKnowledgeRetrieval()
       
       // 步骤3: 用户画像生成
@@ -87,7 +91,48 @@ export class WorkflowOrchestrator {
   }
   
   /**
-   * 步骤2: 知识库检索 (AI生成模拟数据)
+   * 新步骤: 人设生成
+   */
+  async stepPersonaGeneration() {
+    this.reportProgress('persona', '正在生成创作者人设...')
+    
+    try {
+      const variables = {
+        targetAudience: this.workflowStore.parameters.targetAudience || '',
+        feature: this.workflowStore.parameters.feature || '',
+        otherParams: JSON.stringify(this.workflowStore.parameters, null, 2)
+      }
+      
+      const prompt = this.ai.replaceTemplateVariables(
+        personaPrompt.userPromptTemplate,
+        variables
+      )
+      
+      const persona = await this.ai.callClaude(
+        prompt,
+        personaPrompt.systemPrompt,
+        personaPrompt
+      )
+      
+      this.workflowStore.saveIntermediateResult('persona', persona)
+      this.reportProgress('persona', '✅ 创作者人设生成完成')
+      
+      console.log('生成的人设:', persona)
+      
+      if (this.onStepComplete) {
+        this.onStepComplete('persona', persona)
+      }
+    } catch (error) {
+      console.error('人设生成失败:', error)
+      // 人设生成失败时使用默认人设
+      const defaultPersona = '一位经验丰富、真诚可信的内容创作者，关注用户真实需求，以专业又亲切的方式分享经验。'
+      this.workflowStore.saveIntermediateResult('persona', defaultPersona)
+      this.reportProgress('persona', '⚠️ 使用默认人设')
+    }
+  }
+  
+  /**
+   * 步骤2: 知识库检索 (AI生成模拟数据) - 可配置
    */
   async stepKnowledgeRetrieval() {
     this.workflowStore.updateStepStatus('knowledge', 'in_progress')
@@ -96,49 +141,72 @@ export class WorkflowOrchestrator {
     const params = this.workflowStore.parameters
     const paramStr = JSON.stringify(params, null, 2)
     
+    // 读取用户配置的开关（默认为true）
+    const enablePopularArticles = params.enablePopularArticles !== false
+    const enableKeywords = params.enableKeywords !== false
+    const enableRTB = params.enableRTB !== false
+    
     try {
-      // 并发生成三个知识库数据
-      this.reportProgress('knowledge', '正在生成爆文参考...')
-      const popularPrompt = this.ai.replaceTemplateVariables(
-        knowledgeBasePrompts.popularArticles.userPromptTemplate,
-        { parameters: paramStr }
-      )
-      const popularArticles = await this.ai.callClaudeJSON(
-        popularPrompt,
-        knowledgeBasePrompts.popularArticles.systemPrompt,
-        knowledgeBasePrompts.popularArticles
-      )
+      let popularArticles = null
+      let keywords = null
+      let rtb = null
       
-      this.reportProgress('knowledge', '正在提取关键词...')
-      const keywordsPrompt = this.ai.replaceTemplateVariables(
-        knowledgeBasePrompts.keywords.userPromptTemplate,
-        { parameters: paramStr }
-      )
-      const keywords = await this.ai.callClaudeJSON(
-        keywordsPrompt,
-        knowledgeBasePrompts.keywords.systemPrompt,
-        knowledgeBasePrompts.keywords
-      )
+      // 根据配置生成对应的知识库数据
+      if (enablePopularArticles) {
+        this.reportProgress('knowledge', '正在生成爆文参考...')
+        const popularPrompt = this.ai.replaceTemplateVariables(
+          knowledgeBasePrompts.popularArticles.userPromptTemplate,
+          { parameters: paramStr }
+        )
+        popularArticles = await this.ai.callClaudeJSON(
+          popularPrompt,
+          knowledgeBasePrompts.popularArticles.systemPrompt,
+          knowledgeBasePrompts.popularArticles
+        )
+      } else {
+        console.log('⚠️ 爆文库已禁用')
+      }
       
-      this.reportProgress('knowledge', '正在生成RTB话术...')
-      const rtbPrompt = this.ai.replaceTemplateVariables(
-        knowledgeBasePrompts.rtb.userPromptTemplate,
-        { parameters: paramStr }
-      )
-      const rtb = await this.ai.callClaudeJSON(
-        rtbPrompt,
-        knowledgeBasePrompts.rtb.systemPrompt,
-        knowledgeBasePrompts.rtb
-      )
+      if (enableKeywords) {
+        this.reportProgress('knowledge', '正在提取关键词...')
+        const keywordsPrompt = this.ai.replaceTemplateVariables(
+          knowledgeBasePrompts.keywords.userPromptTemplate,
+          { parameters: paramStr }
+        )
+        keywords = await this.ai.callClaudeJSON(
+          keywordsPrompt,
+          knowledgeBasePrompts.keywords.systemPrompt,
+          knowledgeBasePrompts.keywords
+        )
+      } else {
+        console.log('⚠️ 关键词库已禁用')
+      }
       
-      // 保存结果
+      if (enableRTB) {
+        this.reportProgress('knowledge', '正在生成RTB话术...')
+        const rtbPrompt = this.ai.replaceTemplateVariables(
+          knowledgeBasePrompts.rtb.userPromptTemplate,
+          { parameters: paramStr }
+        )
+        rtb = await this.ai.callClaudeJSON(
+          rtbPrompt,
+          knowledgeBasePrompts.rtb.systemPrompt,
+          knowledgeBasePrompts.rtb
+        )
+      } else {
+        console.log('⚠️ RTB话术库已禁用')
+      }
+      
+      // 保存结果（即使为null也保存，让后续步骤知道这些数据不可用）
       this.workflowStore.saveIntermediateResult('popularArticles', popularArticles)
       this.workflowStore.saveIntermediateResult('keywords', keywords)
       this.workflowStore.saveIntermediateResult('rtb', rtb)
       
       this.workflowStore.updateStepStatus('knowledge', 'completed')
       this.workflowStore.nextStep()
-      this.reportProgress('knowledge', '✅ 知识库检索完成')
+      
+      const enabledCount = [enablePopularArticles, enableKeywords, enableRTB].filter(Boolean).length
+      this.reportProgress('knowledge', `✅ 知识库检索完成 (已启用${enabledCount}/3项)`)
       
       if (this.onStepComplete) {
         this.onStepComplete('knowledge', { popularArticles, keywords, rtb })
@@ -158,9 +226,10 @@ export class WorkflowOrchestrator {
     
     try {
       const variables = {
+        persona: this.workflowStore.intermediateResults.persona || '专业内容创作者',
         parameters: JSON.stringify(this.workflowStore.parameters, null, 2),
-        popularArticles: JSON.stringify(this.workflowStore.intermediateResults.popularArticles, null, 2),
-        keywords: JSON.stringify(this.workflowStore.intermediateResults.keywords, null, 2)
+        popularArticles: JSON.stringify(this.workflowStore.intermediateResults.popularArticles || {}, null, 2),
+        keywords: JSON.stringify(this.workflowStore.intermediateResults.keywords || {}, null, 2)
       }
       
       const prompt = this.ai.replaceTemplateVariables(
@@ -197,8 +266,9 @@ export class WorkflowOrchestrator {
     
     try {
       const variables = {
+        persona: this.workflowStore.intermediateResults.persona || '专业内容创作者',
         userProfile: this.workflowStore.intermediateResults.userProfile,
-        keywords: JSON.stringify(this.workflowStore.intermediateResults.keywords, null, 2),
+        keywords: JSON.stringify(this.workflowStore.intermediateResults.keywords || {}, null, 2),
         parameters: JSON.stringify(this.workflowStore.parameters, null, 2)
       }
       
@@ -235,11 +305,16 @@ export class WorkflowOrchestrator {
     this.reportProgress('article', '正在撰写文章...')
     
     try {
+      // 获取文章字数，默认400字
+      const articleLength = this.workflowStore.parameters.articleLength || 400
+      
       const variables = {
+        articleLength: articleLength,
+        persona: this.workflowStore.intermediateResults.persona || '专业内容创作者',
         userProfile: this.workflowStore.intermediateResults.userProfile,
         empathyPoints: JSON.stringify(this.workflowStore.intermediateResults.empathyPoints, null, 2),
-        rtb: JSON.stringify(this.workflowStore.intermediateResults.rtb, null, 2),
-        popularArticles: JSON.stringify(this.workflowStore.intermediateResults.popularArticles, null, 2),
+        rtb: JSON.stringify(this.workflowStore.intermediateResults.rtb || {}, null, 2),
+        popularArticles: JSON.stringify(this.workflowStore.intermediateResults.popularArticles || {}, null, 2),
         parameters: JSON.stringify(this.workflowStore.parameters, null, 2)
       }
       
